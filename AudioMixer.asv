@@ -1,0 +1,105 @@
+myVoice = audiorecorder;
+disp('Start speaking.')
+recordblocking(myVoice, 1)
+disp('End of recording. Playing back ...')
+play(myVoice)
+your_voice = getaudiodata(myVoice);
+
+load train.mat 
+a = y;
+load chirp.mat 
+b = y;
+load gong.mat 
+c = y;
+load splat.mat 
+d = y;
+load handel.mat
+e = y;
+load laughter.mat
+f = y;
+
+min_length = min([length(a), length(b), length(c), length(d), length(e), length(f), length(your_voice)]);
+a = a(1:min_length);
+b = b(1:min_length);
+c = c(1:min_length);
+d = d(1:min_length);
+e = e(1:min_length);
+f = f(1:min_length);
+your_voice = your_voice(1:min_length);
+
+volume_a = 0.5; 
+volume_b = 0.5; 
+volume_c = 0.5; 
+volume_d = 0.5; 
+volume_e = 0.5; 
+volume_f = 0.5; 
+volume_your_voice = 0.5; 
+
+output_volume = 0.4; 
+
+a = a * volume_a;
+b = b * volume_b;
+c = c * volume_c;
+d = d * volume_d;
+e = e * volume_e;
+f = f * volume_f;
+your_voice = your_voice * volume_your_voice;
+
+all_voices = a + b + c + d + e + f + your_voice;
+
+normalized_all_voices = all_voices / max(abs(all_voices(:))); 
+
+output_audio = normalized_all_voices * output_volume;
+
+output_audio(output_audio > 1) = 1;
+output_audio(output_audio < 0) = 0;
+
+sound(output_audio, 8000);
+audiowrite('merged_voices.wav', output_audio, 8000);
+
+fft_all_voices = fft(output_audio);
+fft_your_voice = fft(your_voice, length(fft_all_voices));
+frequencies = linspace(0, 8000, length(fft_all_voices));
+
+figure;
+
+subplot(4,1,1);
+plot(frequencies, abs(fft_all_voices));
+title('Frequency Spectrum of Merged Voices');
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+
+subplot(4,1,2);
+plot(frequencies, abs(fft_your_voice));
+title('Frequency Spectrum of Your Voice');
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+
+fft_extracted_voice = fft(your_voice, length(fft_all_voices));
+extracted_voice = ifft(fft_extracted_voice);
+normalized_extracted_voice = extracted_voice / max(abs(extracted_voice(:))); 
+audiowrite('extracted_voice_fourier.wav', normalized_extracted_voice, 8000);
+
+subplot(4,1,3);
+plot(frequencies, abs(fft_extracted_voice));
+title('Frequency Spectrum of Extracted Voice');
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+
+t = (0:min_length-1) / 8000; 
+
+subplot(4,1,4);
+hold on;
+plot(t, your_voice, 'b', 'DisplayName', 'Your Voice');
+plot(t, a, 'r', 'DisplayName', 'Track A');
+plot(t, b, 'g', 'DisplayName', 'Track B');
+plot(t, c, 'm', 'DisplayName', 'Track C');
+plot(t, d, 'c', 'DisplayName', 'Track D');
+plot(t, e, 'y', 'DisplayName', 'Track E');
+plot(t, f, 'k', 'DisplayName', 'Track F');
+plot(t, output_audio, 'k--', 'DisplayName', 'Mixed Output');
+hold off;
+title('Time Domain Response');
+xlabel('Time (s)');
+ylabel('Amplitude');
+legend('show');
